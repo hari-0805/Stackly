@@ -1,16 +1,17 @@
 import React from "react";
 import StarRating from "./StarRating";
-import "./MovieCard.css";
 function MovieCard({ movie, isAdded, onToggleWatchlist }) {
   return (
     <div className="card">
-      <img
-        src={movie.poster}
-        alt={movie.title}
-        className="card-poster"
-      />
+      <div className="card-poster-wrap">
+        <img
+          src={movie.poster}
+          alt={movie.title}
+          className="card-poster"
+        />
+        <span className="card-genre-badge">{movie.genre}</span>
+      </div>
       <div className="card-body">
-        <span className="card-genre">{movie.genre}</span>
         <h2 className="card-title">{movie.title}</h2>
         <p className="card-meta">{movie.year} &nbsp;•&nbsp; {movie.runtime}</p>
         <StarRating rating={movie.rating} />
@@ -19,9 +20,8 @@ function MovieCard({ movie, isAdded, onToggleWatchlist }) {
           className={`watchlist-btn ${isAdded ? "added" : ""}`}
           onClick={onToggleWatchlist}
         >
-          {isAdded ? " Added to Watchlist" : " Add to Watchlist"}
+          {isAdded ? " Added" : " Add to Watchlist"}
         </button>
-
       </div>
     </div>
   );
