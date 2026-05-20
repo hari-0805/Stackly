@@ -1,4 +1,4 @@
-
+TASK - 3 19/05/2026
 Project structure
 --------------------
 
@@ -99,3 +99,26 @@ const [selectedGenre,  setSelectedGenre]  = useState("All");
 const [watchlist,      setWatchlist]      = useState([]);     
 const [isDark,         setIsDark]         = useState(false);  
 The filtering logic combines both search and genre together:
+
+TASK - 4  20/05/2026
+
+1. OMDb API Integration 
+Created a dedicated api.js file that handles all API communication. Two functions were written — searchMovies() to search movies by title and getMovieDetails() to fetch full details of a selected movie using its IMDb ID. The API key is stored securely in a .env file using VITE_OMDB_API_KEY.
+
+2. Dynamic Search with Debounce - useDebounce.js
+Created a custom React hook useDebounce that delays the API call by 500ms after the user stops typing. This prevents unnecessary API calls on every keystroke and improves performance.
+
+3. API Movie Cards - MovieCard.jsx
+Updated MovieCard.jsx to use OMDb API response fields (movie.Title, movie.Poster, movie.Year, movie.imdbID) instead of local static data. Each card is now clickable and opens a detailed popup.
+
+4. Movie Detail Popup - MovieModal.jsx
+Added a new MovieModal.jsx component that shows full movie details when a card is clicked. It displays the poster, title, year, rating, genre, director, cast, full plot, and a watchlist button. The modal closes when clicking outside or pressing the Escape key.
+
+5. Loading and Error Handling - App.jsx
+Added proper loading and error states. A spinning loader appears while fetching data. An error message box appears if the API returns an error such as invalid key or no results found.
+
+6. Pagination - Pagination.jsx
+Added a Pagination.jsx component. Since OMDb returns 10 results per page, Previous and Next buttons allow the user to navigate through all results. The current page resets to 1 automatically whenever the search query changes.
+
+7. Watchlist Count in Navbar - Navbar.jsx
+Updated Navbar.jsx to accept a watchlistCount prop. A purple badge showing the count appears next to the Watchlist label whenever the user adds movies.

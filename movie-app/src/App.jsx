@@ -1,60 +1,134 @@
-import React, { useState } from "react";
-import Navbar from "./Navbar";
-import SearchBar from "./SearchBar";
-import MovieCard from "./MovieCard";
-import movies from "./moviesData";
+// src/App.jsx
+// Root component — all state and API calls live here
+
+import React, { useState, useEffect } from "react";
+import Navbar       from "./Navbar";
+import SearchBar    from "./SearchBar";
+import MovieCard    from "./MovieCard";
+import MovieModal   from "./MovieModal";
+import Pagination   from "./Pagination";
+import useDebounce  from "./useDebounce";
+import { searchMovies, getMovieDetails } from "./api";
 import "./App.css";
+
 function App() {
-  const [searchQuery,   setSearchQuery]   = useState("");    
-  const [selectedGenre, setSelectedGenre] = useState("All"); 
-  const [watchlist,     setWatchlist]     = useState([]);    
-  const [isDark,        setIsDark]        = useState(false); 
-  const genres = [...new Set(movies.map((m) => m.genre))];
-  const filteredMovies = movies.filter((movie) => {
-    const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGenre  = selectedGenre === "All" || movie.genre === selectedGenre;
-    return matchesSearch && matchesGenre;
-  });
-  function handleToggleWatchlist(movieId) {
-    if (watchlist.includes(movieId)) {
-      setWatchlist(watchlist.filter((id) => id !== movieId));
+
+  const [query,        setQuery]        = useState("batman");      // search text
+  const [movies,       setMovies]       = useState([]);            // list from API
+  const [totalResults, setTotalResults] = useState(0);             // for pagination
+  const [currentPage,  setCurrentPage]  = useState(1);             // current page
+  const [loading,      setLoading]      = useState(false);         // loading state
+  const [error,        setError]        = useState("");             // error message
+  const [selectedMovie, setSelectedMovie] = useState(null);        // modal data
+  const [modalLoading,  setModalLoading]  = useState(false);       // modal loading
+  const [watchlist,    setWatchlist]    = useState([]);             // saved movie IDs
+  const [isDark,       setIsDark]       = useState(false);         // theme
+
+  
+  const debouncedQuery = useDebounce(query, 500);
+
+  
+  useEffect(() => {
+    if (!debouncedQuery.trim()) return; 
+
+    async function fetchMovies() {
+      setLoading(true);
+      setError("");
+      setMovies([]);
+      try {
+        const data = await searchMovies(debouncedQuery, currentPage);
+        setMovies(data.movies);
+        setTotalResults(data.totalResults);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMovies();
+  }, [debouncedQuery, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedQuery]);
+
+  async function handleViewDetails(imdbID) {
+    setModalLoading(true);
+    setSelectedMovie({}); 
+    try {
+      const data = await getMovieDetails(imdbID);
+      setSelectedMovie(data);
+    } catch (err) {
+      setError(err.message);
+      setSelectedMovie(null);
+    } finally {
+      setModalLoading(false);
+    }
+  }
+
+  function handleToggleWatchlist(imdbID) {
+    if (watchlist.includes(imdbID)) {
+      setWatchlist(watchlist.filter((id) => id !== imdbID));
     } else {
-      setWatchlist([...watchlist, movieId]);
+      setWatchlist([...watchlist, imdbID]);
     }
   }
   return (
     <div className={`app-root ${isDark ? "dark" : "light"}`}>
-      <Navbar isDark={isDark} onToggleTheme={() => setIsDark(!isDark)} />
+
+      <Navbar
+        isDark={isDark}
+        onToggleTheme={() => setIsDark(!isDark)}
+        watchlistCount={watchlist.length}
+      />
       <main className="main">
-        <SearchBar query={searchQuery} onChange={setSearchQuery} />
-        <div className="genre-filter">
-          <button
-            className={`genre-btn ${selectedGenre === "All" ? "active" : ""}`}
-            onClick={() => setSelectedGenre("All")}
-          >
-            All
-          </button>
-          {genres.map((genre) => (
-            <button
-              key={genre}
-              className={`genre-btn ${selectedGenre === genre ? "active" : ""}`}
-              onClick={() => setSelectedGenre(genre)}
-            >
-              {genre}
-            </button>
-          ))}
-        </div>
-        <div className="cards-grid">
-          {filteredMovies.map((movie) => (
-            <MovieCard
-              key={movie.id}
-              movie={movie}
-              isAdded={watchlist.includes(movie.id)}
-              onToggleWatchlist={() => handleToggleWatchlist(movie.id)}
-            />
-          ))}
-        </div>
+        <SearchBar query={query} onChange={setQuery} />
+        {loading && (
+          <div className="status-box">
+            <div className="spinner"></div>
+            <p>Searching movies...</p>
+          </div>
+        )}
+        {error && !loading && (
+          <div className="error-box">
+             {error}
+          </div>
+        )}
+        {!loading && (
+          <div className="cards-grid">
+            {movies.map((movie) => (
+              <MovieCard
+                key={movie.imdbID}
+                movie={movie}
+                isAdded={watchlist.includes(movie.imdbID)}
+                onToggleWatchlist={handleToggleWatchlist}
+                onViewDetails={handleViewDetails}
+              />
+            ))}
+          </div>
+        )}
+        {!loading && movies.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalResults={totalResults}
+            onPageChange={setCurrentPage}
+          />
+        )}
+        {!loading && !error && movies.length === 0 && debouncedQuery && (
+          <div className="status-box">
+            <p> No movies found. Try again!</p>
+          </div>
+        )}
       </main>
+      {selectedMovie && (
+        <MovieModal
+          movie={selectedMovie}
+          isAdded={watchlist.includes(selectedMovie.imdbID)}
+          onToggleWatchlist={handleToggleWatchlist}
+          onClose={() => setSelectedMovie(null)}
+          loading={modalLoading}
+        />
+      )}
     </div>
   );
 }
